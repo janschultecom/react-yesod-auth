@@ -1,5 +1,5 @@
 This is a minimalistic template for starting a SPA using Purescript/React in the frontend and Haskell/Yesod as the backend. 
-Authentication is done using OAuth+JWT (not yet implemented).
+Authentication is done using OAuth+JWT (not yet implemented -- coming soon).
 
 # Getting Started
 
