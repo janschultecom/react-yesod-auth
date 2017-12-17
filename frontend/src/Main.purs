@@ -19,19 +19,16 @@ import Data.Maybe (Maybe, fromJust)
 import ReactDOM (render)
 
 
-helloWorld :: ReactClass Unit
+data HelloProps = HelloProps String
+
+helloWorld :: ReactClass HelloProps
 helloWorld = createClassStateless helloText
   where
-    helloText :: Unit -> ReactElement
-    helloText _ = D.h1 [] [D.text "hello world"]
+    helloText :: HelloProps -> ReactElement
+    helloText (HelloProps text) = D.h1 [] [D.text text]
 
-helloMain :: forall eff. Eff (dom :: DOM | eff) Unit
-helloMain = do
-  elem <- app
-  void $ render ui elem
-
-ui :: ReactElement
-ui = D.div' [ createFactory helloWorld unit ]
+ui :: HelloProps -> ReactElement
+ui props = D.div' [ createFactory helloWorld props ]
 
 appId :: forall eff. Eff (dom :: DOM | eff) (Maybe Element)
 appId = do
@@ -48,5 +45,6 @@ main :: forall e. Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e) Unit
 main = launchAff_ do
   response <- get "http://localhost:3000/add/5/7?_accept=application/json"
   elem <- liftEff' app
-  x <- liftEff' $ render ui elem
+  let content = ui $ HelloProps response.response
+  x <- liftEff' $ render content elem
   A.log (response.response )
