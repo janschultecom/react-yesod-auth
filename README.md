@@ -6,6 +6,8 @@ Authentication is done using OAuth+JWT (not yet implemented -- coming soon).
 Start backend
 ```
 cd backend
+stack install yesod-bin --install-ghc
+stack build
 stack exec -- yesod devel
 ```
 
