@@ -12,7 +12,8 @@
     "purescript-affjax": "^5.0.0",
     "purescript-aff": "^4.0.1",
     "purescript-react": "^5.0.1",
-    "purescript-react-dom": "^5.0.0"
+    "purescript-react-dom": "^5.0.0",
+    "purescript-routing": "^6.1.2"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"

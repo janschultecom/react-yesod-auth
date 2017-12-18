@@ -1,33 +1,71 @@
 module Main where
 
+import Control.Apply
+import Data.Functor
+import Data.Map
+import Data.Tuple hiding (lookup)
 import Prelude
-import Control.Monad.Aff (launchAff_, liftEff')
+import Routing
+import Routing.Hash
+import Routing.Match
+import Routing.Match.Class
+
+import Control.Alt ((<|>))
+import Control.Monad.Aff (launchAff_, liftEff', Aff)
 import Control.Monad.Aff.Console as A
-import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff (Eff)
-import Network.HTTP.Affjax (AJAX, get)
-import React.DOM as D
-import DOM (DOM())
+import Control.Monad.Eff.Console (CONSOLE)
+import DOM (DOM)
 import DOM.HTML (window)
+import DOM.HTML.HTMLElement (offsetHeight)
 import DOM.HTML.Types (htmlDocumentToDocument)
 import DOM.HTML.Window (document)
 import DOM.Node.NonElementParentNode (getElementById)
 import DOM.Node.Types (Element, ElementId(..), documentToNonElementParentNode)
-import React (ReactClass, ReactElement, createClassStateless, createFactory)
+import Data.Int (floor)
+import Data.Maybe (Maybe(Just,Nothing), fromJust)
+import Network.HTTP.Affjax (AJAX, get)
 import Partial.Unsafe (unsafePartial)
-import Data.Maybe (Maybe, fromJust)
+import React (ReactClass, ReactElement, createClassStateless, createFactory)
+import React.DOM as D
 import ReactDOM (render)
 
+data Locations
+  = Home
+  | Login (Map String String) -- Callback url for oauth2
+  | User
 
-data HelloProps = HelloProps String
 
-helloWorld :: ReactClass HelloProps
+oneSlash :: Match Unit
+oneSlash = lit "/"
+
+homeSlash :: Match Unit
+homeSlash = lit ""
+
+home :: Match Locations
+home = Home <$ lit "/"
+
+login :: Match Locations
+login = Login <$> (homeSlash *> lit "login" *> params)
+
+user :: Match Locations
+user = User <$ (homeSlash *> lit "user")
+
+routing :: Match Locations
+routing =
+  login    <|>
+  user     <|>
+  home
+
+data AppProps = AppProps String
+
+helloWorld :: ReactClass AppProps
 helloWorld = createClassStateless helloText
   where
-    helloText :: HelloProps -> ReactElement
-    helloText (HelloProps text) = D.h1 [] [D.text text]
+    helloText :: AppProps -> ReactElement
+    helloText (AppProps text) = D.h1 [] [D.text text]
 
-ui :: HelloProps -> ReactElement
+ui :: AppProps -> ReactElement
 ui props = D.div' [ createFactory helloWorld props ]
 
 appId :: forall eff. Eff (dom :: DOM | eff) (Maybe Element)
@@ -41,10 +79,20 @@ app = do
   appId' <- appId
   pure $ unsafePartial fromJust appId'
 
-main :: forall e. Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e) Unit
-main = launchAff_ do
+callService :: forall e. Aff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e) Unit
+callService = do
   response <- get "http://localhost:3000/add/5/7?_accept=application/json"
   elem <- liftEff' app
-  let content = ui $ HelloProps response.response
+  let content = ui $ AppProps response.response
   x <- liftEff' $ render content elem
   A.log (response.response )
+
+main :: forall e. Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e) Unit
+main = launchAff_ $ do
+  Tuple maybeOld new <- matchesAff routing
+  A.log $ case new of
+    Home -> "home"
+    Login params -> case lookup "code" params of
+      Just code -> "login -- " <> code
+      Nothing -> "login -- no code"
+    User -> "user"
