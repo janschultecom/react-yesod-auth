@@ -16,6 +16,7 @@ Start frontend
 cd frontend
 bower install
 npm install
+npm install xhr2
 npm run webpack-dev-server
 open http://localhost:4008
 ```
