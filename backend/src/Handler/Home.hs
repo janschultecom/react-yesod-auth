@@ -18,10 +18,6 @@ import Import
 getHomeR :: Handler Html
 getHomeR = defaultLayout $ do
     setTitle "React/Purescript + Yesod/Haskell"
-    --addScriptRemote "https://unpkg.com/react@16/umd/react.development.js"
-    --addScriptRemote "https://unpkg.com/react-dom@16/umd/react-dom.development.js"
-    --addScriptRemote "https://unpkg.com/babel-standalone@6.15.0/babel.min.js"
-    addScript $ StaticR js_main_js
     [whamlet|
         <div class="container">Hello World!
     |]
