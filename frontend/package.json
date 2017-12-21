@@ -7,8 +7,10 @@
     "webpack-dev-server": "webpack-dev-server --progress --inline --hot"
   },
   "dependencies": {
-    "react": "^16.0.0",
     "create-react-class": "^15.6.0",
+    "dotenv": "^4.0.0",
+    "dotenv-webpack": "^1.5.4",
+    "react": "^16.0.0",
     "react-dom": "^16.0.0"
   },
   "devDependencies": {

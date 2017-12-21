@@ -1,5 +1,7 @@
 'use strict';
 
+const Dotenv = require('dotenv-webpack');
+
 module.exports = {
   entry: './src/App',
 
@@ -41,5 +43,12 @@ module.exports = {
       'bower_components'
     ],
     extensions: [ '', '.purs', '.js']
-  }
+  },
+
+  plugins: [
+    new Dotenv({
+      path: './.env', // Path to .env file (this is the default)
+      safe: false // load .env.example (defaults to "false" which does not use dotenv-safe)
+    })
+  ]
 };
