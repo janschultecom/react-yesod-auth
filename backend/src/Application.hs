@@ -40,6 +40,7 @@ import Handler.Common
 import Handler.Home
 import Handler.Add
 import Handler.Login
+import Yesod.Core.Handler (addHeader)
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -63,6 +64,20 @@ makeFoundation appSettings = do
     -- Return the foundation
     return App {..}
 
+
+-- Todo: This needs to be set properly
+corsPolicy :: CorsResourcePolicy
+corsPolicy = CorsResourcePolicy {
+                 corsOrigins        = Nothing
+               , corsMethods        = ["OPTIONS", "GET", "PUT", "POST"]
+               , corsRequestHeaders = ["Authorization", "Content-Type"]
+               , corsExposedHeaders = Nothing
+               , corsMaxAge         = Nothing
+               , corsVaryOrigin     = False
+               , corsRequireOrigin  = False
+               , corsIgnoreFailures = False
+             }
+
 -- | Convert our foundation to a WAI Application by calling @toWaiAppPlain@ and
 -- applying some additional middlewares.
 makeApplication :: App -> IO Application
@@ -70,7 +85,7 @@ makeApplication foundation = do
     logWare <- makeLogWare foundation
     -- Create the WAI application and apply middlewares
     appPlain <- toWaiAppPlain foundation
-    return $ logWare $ defaultMiddlewaresNoLogging $ simpleCors appPlain
+    return $ logWare $ defaultMiddlewaresNoLogging $ cors (const $ Just corsPolicy) appPlain
 
 makeLogWare :: App -> IO Middleware
 makeLogWare foundation =
