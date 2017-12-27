@@ -4,31 +4,35 @@ import Control.Alt ((<|>))
 import Control.Monad.Aff (Aff, catchError, launchAff_, liftEff', attempt)
 import Control.Monad.Aff.Console as A
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE)
-import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Console (CONSOLE, log)
+import Control.Monad.Eff.Exception (EXCEPTION, catchException, try)
 import DOM (DOM)
 import DOM.HTML (window)
 import DOM.HTML.HTMLElement (offsetHeight)
-import DOM.HTML.Types (htmlDocumentToDocument)
-import DOM.HTML.Window (document)
+import DOM.HTML.History (DocumentTitle(..), URL(..), pushState, state)
+import DOM.HTML.Location (href, pathname, search)
+import DOM.HTML.Types (HISTORY, htmlDocumentToDocument)
+import DOM.HTML.Window (document, history, location)
 import DOM.Node.NonElementParentNode (getElementById)
 import DOM.Node.Types (Element, ElementId(..), documentToNonElementParentNode)
 import Data.Argonaut.Core (jsonEmptyObject)
 import Data.Argonaut.Encode (encodeJson, class EncodeJson, (:=), (~>))
 import Data.Either (Either(..))
+import Data.Foreign (Foreign, toForeign)
+import Data.Functor (void)
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(Just, Nothing), fromJust)
 import Data.Show (show)
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX, get, post)
 import Partial.Unsafe (unsafePartial)
-import Prelude (class Show, Unit, bind, pure, ($), (*>), (<$), (<$>), (<>))
+import Prelude (class Show, Unit, Void, bind, pure, ($), (*>), (<$), (<$>), (<>))
 import Process.Env (googleClientId)
 import React (ReactClass, ReactElement, createClassStateless, createFactory)
 import React.DOM as D
 import React.DOM.Props as P
 import ReactDOM (render)
-import Routing (matchesAff)
+import Routing (matches)
 import Routing.Match (Match)
 import Routing.Match.Class (fail, lit, str, params)
 
@@ -139,22 +143,41 @@ handleError e = do
   x <- A.log $ show e
   pure (Tuple Nothing Home)
 
+data WindowState = WindowState String
 
-main :: forall e. Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e) Unit
-main = launchAff_ $ do
-  y <- A.log "BEFORE MATCHING"
-  tuple <- attempt (matchesAff routing)
-  Tuple maybeOld new <- case tuple of
-    Left error -> do
-      z <- A.log "In left"
-      x <- A.log $ show error
-      pure (Tuple Nothing Home)
-    Right t -> do
-      z <- A.log "In Right"
-      pure t
-  case new of
-    Home -> callService $ AppProps googleClientId
-    Login params -> case lookup "code" params of
-      Just code -> requestLogin $ Code { code }
-      Nothing -> A.log $ "login -- no code"
-    User -> A.log $ "user"
+main :: forall e. Eff (ajax :: AJAX , history:: HISTORY, console :: CONSOLE, dom :: DOM, exception :: EXCEPTION | e) Unit
+main = do
+  win <- window
+  his <- history win
+  loc <- location win
+  path <- pathname loc
+  hr <- href loc
+  s <- search loc
+  _ <- log $ "Path: " <> path <> "\nHref" <> hr <> "\nSearch" <> s
+  _ <- case path of
+    "/" -> pushState (toForeign "") (DocumentTitle "New page") (URL $ "/#/" <> s) his
+    _ -> log "All fine"
+  failure <- try $ matches routing (\old new -> someAction old new)
+
+  case failure of
+    Left ex -> someAction Nothing Home
+    Right other -> log "Finished"
+        --- other stuff ---
+  where
+    someAction :: forall e2. Maybe Locations -> Locations -> Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e2) Unit
+    someAction maybeOld new = launchAff_ $ do
+      x <- A.log "In do loop"
+      {-Tuple maybeOld new <- case tuple of
+        Left error -> do
+          z <- A.log "In left"
+          x <- A.log $ show error
+          pure (Tuple Nothing Home)
+        Right t -> do
+          z <- A.log "In Right"
+          pure t -}
+      case new of
+        Home -> callService $ AppProps googleClientId
+        Login params -> case lookup "code" params of
+          Just code -> requestLogin $ Code { code }
+          Nothing -> A.log $ "login -- no code"
+        User -> A.log $ "user"
