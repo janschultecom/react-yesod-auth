@@ -20,13 +20,15 @@ import Data.Argonaut.Encode (encodeJson, class EncodeJson, (:=), (~>))
 import Data.Either (Either(..))
 import Data.Foreign (Foreign, toForeign)
 import Data.Functor (void)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(Just, Nothing), fromJust)
 import Data.Show (show)
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX, get, post)
 import Partial.Unsafe (unsafePartial)
-import Prelude (class Show, Unit, Void, bind, pure, ($), (*>), (<$), (<$>), (<>))
+import Prelude (class Show, Unit, Void, bind, liftA1, pure, ($), (*>), (<$), (<$>), (<>),unit)
 import Process.Env (googleClientId)
 import React (ReactClass, ReactElement, createClassStateless, createFactory)
 import React.DOM as D
@@ -35,12 +37,15 @@ import ReactDOM (render)
 import Routing (matches)
 import Routing.Match (Match)
 import Routing.Match.Class (fail, lit, str, params)
+import Providers (Provider(..))
 
 data Locations
   = Home
   | Login (Map String String) -- Callback url for oauth2
   | User
 
+derive instance genericLocations :: Generic Locations _
+instance showLocations :: Show Locations where show = genericShow
 
 oneSlash :: Match Unit
 oneSlash = lit "/"
@@ -78,7 +83,7 @@ google clientId = "https://accounts.google.com/o/oauth2/v2/auth?\
  \state=state_parameter_passthrough_value&\
  \redirect_uri=http%3A%2F%2Flocalhost:4008%2F?login=google&\
  \response_type=code&\
- \client_id=" <> clientId
+ \client_id=" <> googleClientId
 
 data UIProps = UIProps { text :: String, clientId :: String }
 
@@ -108,11 +113,12 @@ app = do
 
 callService :: forall e. AppProps -> Aff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e) Unit
 callService (AppProps cId) = do
-  response <- get "http://localhost:3000/add/5/7?_accept=application/json"
+  --response <- get "http://localhost:3000/add/5/7?_accept=application/json"
   elem <- liftEff' app
-  let content = ui $ UIProps { text : response.response, clientId : cId }
+  let content = ui $ UIProps { text : "HELLO", clientId : cId }
   x <- liftEff' $ render content elem
-  A.log (response.response )
+  --A.log (response.response )
+  A.log "Elem"
 
 data Code = Code { code :: String }
 
@@ -151,30 +157,20 @@ main = do
   his <- history win
   loc <- location win
   path <- pathname loc
-  hr <- href loc
   s <- search loc
-  _ <- log $ "Path: " <> path <> "\nHref" <> hr <> "\nSearch" <> s
   _ <- case path of
     "/" -> pushState (toForeign "") (DocumentTitle "New page") (URL $ "/#/" <> s) his
-    _ -> log "All fine"
+    _ -> pure unit --log "All fine"
   failure <- try $ matches routing (\old new -> someAction old new)
 
   case failure of
     Left ex -> someAction Nothing Home
-    Right other -> log "Finished"
+    Right other -> pure unit --log "Finished"
         --- other stuff ---
   where
     someAction :: forall e2. Maybe Locations -> Locations -> Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e2) Unit
     someAction maybeOld new = launchAff_ $ do
-      x <- A.log "In do loop"
-      {-Tuple maybeOld new <- case tuple of
-        Left error -> do
-          z <- A.log "In left"
-          x <- A.log $ show error
-          pure (Tuple Nothing Home)
-        Right t -> do
-          z <- A.log "In Right"
-          pure t -}
+      x <- A.log $ "In do loop - before match. New: " <> (show new)
       case new of
         Home -> callService $ AppProps googleClientId
         Login params -> case lookup "code" params of
