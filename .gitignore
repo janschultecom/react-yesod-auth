@@ -13,7 +13,7 @@ frontend/.psc-package/
 frontend/.psc*
 frontend/.purs*
 frontend/.psa*
-
+frontend/bundle.js
 
 # backend
 backend/*.el
