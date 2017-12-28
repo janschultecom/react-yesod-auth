@@ -1,3 +1,5 @@
 module Process.Env where
 
-foreign import googleClientId :: String 
+foreign import serverHost :: String
+foreign import clientHost :: String
+foreign import authenticatorGoogle :: String
