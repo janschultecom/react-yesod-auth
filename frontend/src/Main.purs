@@ -23,17 +23,16 @@ import Process.Env as ENV
 import React (ReactComponent)
 import ReactDOM (render)
 import Routing (matches)
+import Routing.Match.Error (showMatchError)
 import Service.Login as SL
 import Util (redirectToHash, getContainer)
 
 data AppProps = AppProps { client :: Host, server :: Host }
 
-
 loginPage :: forall e. Host -> Window -> Eff (console :: CONSOLE, exception :: EXCEPTION, dom :: DOM | e) (Maybe ReactComponent)
 loginPage client win = do
   container <-  getContainer win
   render (createLogin $ LoginProps client) container
-
 
 main :: forall e. Eff (ajax :: AJAX , history:: HISTORY, console :: CONSOLE, dom :: DOM, exception :: EXCEPTION | e) Unit
 main = do
@@ -43,7 +42,10 @@ main = do
   let appProps = (AppProps { client : Host ENV.clientHost , server : Host ENV.serverHost } )
   failure <- try $ matches routing (\old new -> someAction old new win appProps)
   case failure of
-    Left ex -> someAction Nothing Home win appProps
+    Left ex ->
+      do
+        _ <- log $ "Failed to match: " <> show ex
+        someAction Nothing Home win appProps
     Right other -> pure unit --log "Finished"
         --- other stuff ---
   where
@@ -52,7 +54,10 @@ main = do
       x <- A.log $ "In do loop - before match. New: " <> (show new)
       case new of
         Home -> void $ liftEff' $ loginPage client  win
-        Login params -> case lookup "code" params of
-          Just code -> SL.requestLogin server $ SL.Code { code }
+        Login params -> case SL.paramsToLoginRequest params of
+          Just request ->
+            do
+              _ <- A.log "Matched login, performing login request now"
+              SL.requestLogin server request
           Nothing -> A.log $ "login -- no code"
         User -> A.log $ "user"

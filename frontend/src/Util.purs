@@ -4,11 +4,11 @@ import Prelude
 
 import Control.Monad.Aff (error)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Exception (EXCEPTION, throwException)
 import DOM (DOM)
 import DOM.HTML.History (DocumentTitle(..), URL(..), pushState)
-import DOM.HTML.Location (pathname, search)
+import DOM.HTML.Location (href, pathname, search)
 import DOM.HTML.Types (HISTORY, Window, htmlDocumentToDocument)
 import DOM.HTML.Window (document, history, location)
 import DOM.Node.NonElementParentNode (getElementById)
@@ -30,6 +30,7 @@ redirectToHash win = do
   his <- history win
   doc <- document win
   loc <- location win
+  _ <- href >=> log $ loc
   path <- pathname loc
   s <- search loc
   case path of

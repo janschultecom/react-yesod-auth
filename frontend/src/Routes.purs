@@ -22,13 +22,14 @@ oneSlash :: Match Unit
 oneSlash = lit "/"
 
 homeSlash :: Match Unit
-homeSlash = lit ""
+homeSlash = lit "/"
 
 home :: Match Locations
 home = Home <$ lit ""
 
 login :: Match Locations
-login = Login <$> (homeSlash *> lit "login" *> params)
+--login = Login <$> (homeSlash *> lit "login" *> params)
+login = Login <$> (lit ""*> params)
 
 user :: Match Locations
 user = User <$ (homeSlash *> lit "user")
