@@ -1,7 +1,10 @@
 module Main where
 
+import Routes
+
 import Common (Host(..))
 import Components.Login (LoginProps(..), createLogin)
+import Control.Alt (void)
 import Control.Monad.Aff (launchAff_, liftEff')
 import Control.Monad.Aff.Console as A
 import Control.Monad.Eff (Eff)
@@ -17,39 +20,39 @@ import Data.Show (show)
 import Network.HTTP.Affjax (AJAX)
 import Prelude (Unit, bind, pure, unit, ($), (<>))
 import Process.Env as ENV
+import React (ReactComponent)
 import ReactDOM (render)
 import Routing (matches)
-import Util (redirectToHash,getContainer)
 import Service.Login as SL
-import Routes
-data AppProps = AppProps Host
+import Util (redirectToHash, getContainer)
+
+data AppProps = AppProps { client :: Host, server :: Host }
 
 
-callService :: forall e. AppProps -> Window -> Eff (console :: CONSOLE, exception :: EXCEPTION, dom :: DOM | e) Unit
-callService (AppProps host) win = do
-  --response <- get "http://localhost:3000/add/5/7?_accept=application/json"
+loginPage :: forall e. Host -> Window -> Eff (console :: CONSOLE, exception :: EXCEPTION, dom :: DOM | e) (Maybe ReactComponent)
+loginPage client win = do
   container <-  getContainer win
-  let content = createLogin $ LoginProps host
-  _ <- render content container
-  log "Created Login"
+  render (createLogin $ LoginProps client) container
+
 
 main :: forall e. Eff (ajax :: AJAX , history:: HISTORY, console :: CONSOLE, dom :: DOM, exception :: EXCEPTION | e) Unit
 main = do
   win <- window
   _ <- redirectToHash win
-  failure <- try $ matches routing (\old new -> someAction old new win)
 
+  let appProps = (AppProps { client : Host ENV.clientHost , server : Host ENV.serverHost } )
+  failure <- try $ matches routing (\old new -> someAction old new win appProps)
   case failure of
-    Left ex -> someAction Nothing Home win
+    Left ex -> someAction Nothing Home win appProps
     Right other -> pure unit --log "Finished"
         --- other stuff ---
   where
-    someAction :: forall e2. Maybe Locations -> Locations -> Window -> Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e2) Unit
-    someAction maybeOld new win = launchAff_ $ do
+    someAction :: forall e2. Maybe Locations -> Locations -> Window -> AppProps -> Eff (ajax :: AJAX , console :: CONSOLE, dom :: DOM | e2) Unit
+    someAction maybeOld new win (AppProps { client, server })= launchAff_ $ do
       x <- A.log $ "In do loop - before match. New: " <> (show new)
       case new of
-        Home -> liftEff' $ callService (AppProps (Host ENV.clientHost)) win
+        Home -> void $ liftEff' $ loginPage client  win
         Login params -> case lookup "code" params of
-          Just code -> SL.requestLogin $ SL.Code { code }
+          Just code -> SL.requestLogin server $ SL.Code { code }
           Nothing -> A.log $ "login -- no code"
         User -> A.log $ "user"
