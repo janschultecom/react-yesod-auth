@@ -14,7 +14,6 @@ import DOM (DOM)
 import DOM.HTML (window)
 import DOM.HTML.Types (HISTORY, Window)
 import Data.Either (Either(..))
-import Data.Map (lookup)
 import Data.Maybe (Maybe(Nothing, Just))
 import Data.Show (show)
 import Network.HTTP.Affjax (AJAX)
@@ -23,7 +22,6 @@ import Process.Env as ENV
 import React (ReactComponent)
 import ReactDOM (render)
 import Routing (matches)
-import Routing.Match.Error (showMatchError)
 import Service.Login as SL
 import Util (redirectToHash, getContainer)
 

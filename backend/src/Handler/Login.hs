@@ -14,5 +14,17 @@ newtype Token = Token {
 
 instance ToJSON Token
 
+data LoginRequest = LoginRequest {
+        provider :: Text,
+        code :: Text,
+        state :: Text,
+        scope :: Text
+    } deriving (Generic, Show, Eq)
+
+instance FromJSON LoginRequest
+instance ToJSON LoginRequest
+
 postLoginR :: Handler Value
-postLoginR = returnJson Token { token = "123" }
+postLoginR = do
+    post <- requireJsonBody :: Handler LoginRequest
+    returnJson post -- Token { token = "123" }
