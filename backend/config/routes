@@ -10,3 +10,4 @@
 
 /add/#Int/#Int AddR  GET
 /api/v1/login LoginR POST
+/authenticate/#String AuthenticateR GET
