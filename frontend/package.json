@@ -11,7 +11,8 @@
     "dotenv": "^4.0.0",
     "dotenv-webpack": "^1.5.4",
     "react": "^16.0.0",
-    "react-dom": "^16.0.0"
+    "react-dom": "^16.0.0",
+    "xhr2": "^0.1.4"
   },
   "devDependencies": {
     "purescript": "0.11.6",
