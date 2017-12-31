@@ -17,6 +17,7 @@ dependencies:
 - cookie
 - transformers
 - mtl
+- jose-jwt >= 0.7.8
 - classy-prelude >=0.10.2
 - classy-prelude-conduit >=0.10.2
 - bytestring >=0.9 && <0.11
