@@ -7,8 +7,6 @@ maintainer:          "example@example.com"
 copyright:           "2018 Jan Schulte"
 
 extra-source-files:
-- README.md
-- ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -17,7 +15,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/githubuser/backend#readme>
+description:         Please see the README on Github at <https://github.com/janschultecom/react-yesod-auth#readme>
 
 dependencies:
 - base >= 4.7 && < 5

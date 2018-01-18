@@ -39,4 +39,8 @@ backend/cabal.sandbox.config
 \#*
 backend/backend.cabal
 
-
+# backend new
+backend2/backend.cabal
+backend2/.stack-work/
+backend2/.cabal-sandbox
+backend2/cabal.sandbox.config
