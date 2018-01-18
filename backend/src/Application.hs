@@ -61,6 +61,7 @@ makeFoundation appSettings = do
     appStatic <-
         (if appMutableStatic appSettings then staticDevel else static)
         (appStaticDir appSettings)
+    appGoogleKeys <- loadOAuthKeysEnv "GOOGLE"
 
     -- Return the foundation
     return App {..}

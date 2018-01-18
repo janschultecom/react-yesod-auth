@@ -1,21 +1,25 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module Handler.Authenticate where
 
-import Import
-import Data.Aeson
-import GHC.Generics
-import Web.Cookie
-import Data.Time
-import Prelude as P
-import Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
+import           Control.Monad.Trans.Maybe (MaybeT (..), runMaybeT)
+import           Data.Aeson                as A
+import qualified Data.ByteString           as BS
+import           Data.Time
+import           GHC.Generics
+import           Import
+import           Prelude                   as P
+import           Web.Cookie
 
-import Jose.Jwt (KeyId(..), Payload(..))
-import Jose.Jwe (jwkEncode)
-import Jose.Jwa
-import Jose.Jwk (generateRsaKeyPair, generateSymmetricKey, KeyUse(Enc))
+import           Jose.Jwa
+import           Jose.Jwe                  (jwkEncode)
+import           Jose.Jwk                  (KeyUse (Enc), generateRsaKeyPair,
+                                            generateSymmetricKey)
+import           Jose.Jwt                  as J (encode)
+import           Jose.Jwt                  (JwtEncoding (..), KeyId (..),
+                                            Payload (..))
 
 data Provider = Google deriving Show
 newtype Code = Code Text deriving Show
@@ -26,7 +30,7 @@ data OAuth2 = OAuth2 Provider Code Scope State deriving Show
 
 parse :: Text -> Maybe Provider
 parse "google" = Just Google
-parse _ = Nothing
+parse _        = Nothing
 
 extractOAuth2Params :: MonadHandler m => Text -> m (Maybe OAuth2)
 extractOAuth2Params input = runMaybeT $ do
@@ -39,25 +43,32 @@ extractOAuth2Params input = runMaybeT $ do
 
 getAuthenticateR :: Text -> Handler ()
 getAuthenticateR provider = do
-    --triple <- (\a b c -> (a,b,c)) <$> lookupGetParam "code" <*> lookupGetParam "scope" <*> lookupGetParam "state"
-    --triple <- liftA3 (\a b c -> (a,b,c)) (lookupGetParam "code") (lookupGetParam "scope") (lookupGetParam "state")
-    aesKey <- lift $ generateSymmetricKey 16 (KeyId ("My Keywrap Key" :: Text)) Enc Nothing
-    _ <- lift $ P.print $ encode $ toJSON aesKey
-    maybeJWT <- lift $ jwkEncode A128KW A128GCM aesKey (Claims "more secret claims")
+
+    bytes <- liftIO $ BS.readFile "config/key.pub"
+    jwk <- let x = fmap fromJSON (decode $ fromStrict bytes) in
+           case x of
+              Just (Success y) -> pure y
+              _                -> fail "Failed to parse key"
+
+
+
+    maybeJWT <- lift $ jwkEncode RSA_OAEP A256GCM jwk (Claims "my secret shit")
+
+
     jwt <- case maybeJWT of
-                Right j -> pure $ encode $ toJSON j
+                Right j -> pure $ toStrict $ A.encode $ A.toJSON j
                 Left ex -> fail $ "Couldn't create jwt: " <> show ex
-    -- >>> Right (Jwt jwt) <- jwkEncode A128KW A128GCM aesKey (Claims "more secret claims")
+
     oauth2 <- extractOAuth2Params provider
 
     _ <- lift $ P.print oauth2
-    c <- lift getCurrentTime                  -- 2009-04-21 14:25:29.5585588 UTC
-    let --(y,m,d) = toGregorian $ utctDay c    -- (2009,4,21)
-        expires = addDays 30 $ utctDay c
+    c <- lift getCurrentTime
+    let expires = addDays 30 $ utctDay c
         cookie = defaultSetCookie {
-            setCookieName = "access-token",
-            setCookieValue = toStrict jwt,
+            setCookieName = "access_token",
+            setCookieValue = jwt,
             setCookiePath = Just "/",
+            setCookieDomain = Just "localhost",
             setCookieExpires = Just $ UTCTime expires (secondsToDiffTime 0)  }
     _ <- setCookie cookie
     redirectWith status302 ("http://localhost:4008/#/" :: Text) --"-- returnJson "bla" -- post -- Token { token = "123" }

@@ -15,6 +15,19 @@ import Yesod.Default.Util          (addStaticContentExternal)
 import qualified Yesod.Core.Unsafe as Unsafe
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text.Encoding as TE
+import Authentication.OAuth2
+import System.Environment (getEnv)
+import qualified Data.Text as T
+import Yesod.Auth hiding (LoginR)
+import Yesod.Auth.OAuth2.Google
+
+loadOAuthKeysEnv :: String -> IO OAuthKeys
+loadOAuthKeysEnv prefix = OAuthKeys
+    <$> (getEnvT $ prefix <> "_CLIENT_ID")
+    <*> (getEnvT $ prefix <> "_CLIENT_SECRET")
+
+  where
+		getEnvT = fmap T.pack . getEnv
 
 -- | The foundation datatype for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -25,6 +38,7 @@ data App = App
     , appStatic      :: Static -- ^ Settings for static file serving.
     , appHttpManager :: Manager
     , appLogger      :: Logger
+    , appGoogleKeys  :: OAuthKeys
     }
 
 
@@ -57,10 +71,10 @@ instance Yesod App where
 
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
-    {- makeSessionBackend _ = Just <$> defaultClientSessionBackend
+    makeSessionBackend _ = Just <$> defaultClientSessionBackend
         120    -- timeout in minutes
-        "config/client_session_key.aes" -}
-    makeSessionBackend _ = return Nothing -- We will be stateless
+        "config/client_session_key.aes"
+    --makeSessionBackend _ = return Nothing -- We will be stateless
 
     -- Yesod Middleware allows you to run code before and after each handler function.
     -- The defaultYesodMiddleware adds the response header "Vary: Accept, Accept-Language" and performs authorization checks.
@@ -121,6 +135,35 @@ instance Yesod App where
             || level == LevelError
 
     makeLogger = return . appLogger
+
+instance YesodAuth App where
+    type AuthId App = Text
+    loginDest _ = HomeR
+    logoutDest _ = HomeR
+
+    -- Disable any attempt to read persisted authenticated state
+    maybeAuthId = return Nothing
+
+    -- Copy the Creds response into the session for viewing after
+    authenticate c = do
+        mapM_ (uncurry setSession) $
+            [ ("credsIdent", credsIdent c)
+            , ("credsPlugin", credsPlugin c)
+            ] ++ credsExtra c
+
+        return $ Authenticated "1"
+
+    authHttpManager = appHttpManager
+
+    authPlugins m =
+        [ {-oauth2Github
+            (oauthKeysClientId $ appGithubKeys m)
+            (oauthKeysClientSecret $ appGithubKeys m)-}
+          oauth2Google
+             (oauthKeysClientId $ appGoogleKeys m)
+             (oauthKeysClientSecret $ appGoogleKeys m)
+        -- , etc...
+		]
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.
