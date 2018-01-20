@@ -1,6 +1,8 @@
 .DS_STORE
 */.idea/
 *.iml
+*.env
+
 
 # frontend
 frontend/.env

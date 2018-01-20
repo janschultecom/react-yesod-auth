@@ -19,12 +19,16 @@ description:         Please see the README on Github at <https://github.com/jans
 
 dependencies:
 - base >= 4.7 && < 5
+- text
 - servant
 - servant-server
 - transformers
 - aeson
 - wai
 - warp
+- dotenv
+- directory
+- http-client
 
 library:
   source-dirs: src

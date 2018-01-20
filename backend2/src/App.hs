@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
 module App where
@@ -12,15 +13,19 @@ import           Network.Wai
 import           Network.Wai.Handler.Warp
 import           Servant
 import           System.IO
-
+import System.Directory
+import Data.Text
+import Control.Monad.IO.Class (liftIO, MonadIO)
+import Data.Monoid
+import Authenticate.OAuth2
+import Configuration.Dotenv.Types
+import qualified Configuration.Dotenv as Dotenv
 -- * api
 
-type ItemApi =
-  "item" :> Get '[JSON] [Item] :<|>
-  "item" :> Capture "itemId" Integer :> Get '[JSON] Item
+type Api = "oauth2" :> Capture "provider" Text :> QueryParam "code" Text :> Get '[PlainText] NoContent
 
-itemApi :: Proxy ItemApi
-itemApi = Proxy
+myApi :: Proxy Api
+myApi = Proxy
 
 -- * app
 
@@ -31,36 +36,23 @@ run = do
         setPort port $
         setBeforeMainLoop (hPutStrLn stderr ("listening on port " ++ show port)) $
         defaultSettings
+
   runSettings settings =<< mkApp
 
 mkApp :: IO Application
-mkApp = return $ serve itemApi server
+mkApp = do
+	home <- getHomeDirectory
+	_ <- Dotenv.loadFile $ Config [home <> "/.env"] [".env.example"] True
+	oauth2 <- loadOAuthKeysEnv Google
+	return $ serve myApi server
 
-server :: Server ItemApi
-server =
-  getItems :<|>
-  getItemById
+server :: Server Api
+server = authenticate
 
-getItems :: Handler [Item]
-getItems = return [exampleItem]
 
-getItemById :: Integer -> Handler Item
-getItemById = \ case
-  0 -> return exampleItem
-  _ -> throwError err404
-
-exampleItem :: Item
-exampleItem = Item 0 "example hallo"
-
--- * item
-
-data Item
-  = Item {
-    itemId :: Integer,
-    itemText :: String
-  }
-  deriving (Eq, Show, Generic)
-
-instance ToJSON Item
-instance FromJSON Item
+authenticate :: Text -> Maybe Text -> Handler NoContent
+authenticate provider (Just code) = do
+	_ <- liftIO $ print $ "Provider: " <> provider <> "\nCode: " <> code
+	return NoContent
+authenticate _ _ = return NoContent
 
