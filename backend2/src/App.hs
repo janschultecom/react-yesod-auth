@@ -20,6 +20,10 @@ import Data.Monoid
 import Authenticate.OAuth2
 import Configuration.Dotenv.Types
 import qualified Configuration.Dotenv as Dotenv
+
+import           Data.Aeson            (Value)
+import qualified Network.HTTP.Simple as H
+
 -- * api
 
 type Api = "oauth2" :> Capture "provider" Text :> QueryParam "code" Text :> Get '[PlainText] NoContent
@@ -49,10 +53,25 @@ mkApp = do
 server :: Server Api
 server = authenticate
 
+{-
+{
+  "access_token":"1/fFAGRNJru1FTz70BzhT3Zg",
+  "expires_in":3920,
+  "token_type":"Bearer",
+  "refresh_token":"1/xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI"
+}
+-}
+data OAuth2Response = OAuth2Response { accessToken :: Text, expiresIn :: Int, tokenType :: Text, refreshToken :: Text } deriving Show
+
+-- We expect a JSON object, so we fail at any non-Object value.
+instance FromJSON OAuth2Response where
+    parseJSON = withObject "Occupation" $ \v -> OAuth2Response <$> v .: "access_token" <*> v .: "expires_in" <*> v .: "token_type" <*> v .: "refresh_token"
 
 authenticate :: Text -> Maybe Text -> Handler NoContent
 authenticate provider (Just code) = do
 	_ <- liftIO $ print $ "Provider: " <> provider <> "\nCode: " <> code
+	response <- H.httpJSONEither "http://www.mocky.io/v2/5a665dcf2e00006b29323e58" :: Handler (H.Response (Either H.JSONException OAuth2Response))
+	_ <- liftIO $ print $ "Received response" <> show response
 	return NoContent
 authenticate _ _ = return NoContent
 

@@ -29,6 +29,7 @@ dependencies:
 - dotenv
 - directory
 - http-client
+- http-conduit
 
 library:
   source-dirs: src
